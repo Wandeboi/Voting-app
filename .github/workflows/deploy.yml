@@ -6,7 +6,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v6
       - name: Smoke test with Compose
@@ -18,7 +18,7 @@ jobs:
 
   build-scan-push:
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -36,7 +36,7 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_WANDE }}/voting-${{ matrix.service }}:${{ github.sha }}
 
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           image-ref: ${{ secrets.DOCKERHUB_WANDE }}/voting-${{ matrix.service }}:${{ github.sha }}
           severity: CRITICAL,HIGH
@@ -57,7 +57,7 @@ jobs:
 
   deploy:
     needs: build-scan-push
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: azure/setup-helm@v4
