@@ -1,0 +1,12 @@
+.git
+.gitignore
+.env
+*.md
+node_modules
+__pycache__
+*.pyc
+bin
+obj
+target
+Dockerfile
+docker-compose*.yml

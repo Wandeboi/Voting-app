@@ -1,0 +1,73 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Smoke test with Compose
+        run: |
+          docker compose up -d --build
+          sleep 20
+          curl --fail http://localhost:8080 || (docker compose logs && exit 1)
+          docker compose down
+
+  build-scan-push:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [vote, result, worker]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (not pushed yet)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          load: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/voting-${{ matrix.service }}:${{ github.sha }}
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/voting-${{ matrix.service }}:${{ github.sha }}
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/voting-${{ matrix.service }}:${{ github.sha }}
+
+  deploy:
+    needs: build-scan-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+      - name: Helm deploy
+        run: |
+          helm upgrade --install voting ./chart \
+            --set apps.vote.image.tag=${{ github.sha }} \
+            --set apps.result.image.tag=${{ github.sha }} \
+            --set apps.worker.image.tag=${{ github.sha }}
