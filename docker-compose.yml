@@ -5,7 +5,7 @@
 services:
   vote:
     build: 
-      context: ./vote
+      context: ./vote 
       target: dev
     depends_on:
       redis:
@@ -19,7 +19,7 @@ services:
     volumes:
      - ./vote:/usr/local/app
     ports:
-      - "8080:80"
+      - "5000:5000"
     networks:
       - front-tier
       - back-tier
@@ -34,7 +34,7 @@ services:
     volumes:
       - ./result:/usr/local/app
     ports:
-      - "8081:80"
+      - "5001:5000"
       - "127.0.0.1:9229:9229"
     networks:
       - front-tier

@@ -7,6 +7,7 @@ RUN apt-get update && \
 
 WORKDIR /usr/local/app
 
+
 # have nodemon available for local dev use (file watching)
 RUN npm install -g nodemon
 
@@ -18,8 +19,14 @@ RUN npm ci && \
 
 COPY . .
 
-ENV PORT=80
-EXPOSE 80
+# create non-root user and give it ownership of the app
+RUN addgroup --system appuser && adduser --system --ingroup appuser appuser && \
+    chown -R appuser:appuser /usr/local/app
+
+ENV PORT=5000
+EXPOSE 5000
+
+USER appuser
 
 ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["node", "server.js"]
