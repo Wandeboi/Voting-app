@@ -36,7 +36,7 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_WANDE }}/voting-${{ matrix.service }}:${{ github.sha }}
 
       - name: Trivy scan
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ secrets.DOCKERHUB_WANDE }}/voting-${{ matrix.service }}:${{ github.sha }}
           severity: CRITICAL,HIGH
