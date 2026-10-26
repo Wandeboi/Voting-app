@@ -64,15 +64,20 @@ jobs:
     needs: build-scan-push
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
-      - uses: azure/setup-helm@v4
+      - uses: actions/checkout@v6
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-north-1
+
       - name: Configure kubectl
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+        run: aws eks update-kubeconfig --name voting-app-cluster --region eu-north-1
+
       - name: Helm deploy
         run: |
-          helm upgrade --install voting ./chart \
+          helm upgrade --install voting ./chart --wait --timeout 5m \
             --set apps.vote.image.tag=${{ github.sha }} \
             --set apps.result.image.tag=${{ github.sha }} \
             --set apps.worker.image.tag=${{ github.sha }}
