@@ -3,6 +3,7 @@ FROM python:3.11-slim AS base
 
 # Add curl for healthcheck
 RUN apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
@@ -11,7 +12,8 @@ WORKDIR /usr/local/app
 
 # Install our requirements.txt
 COPY requirements.txt ./requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip uninstall -y setuptools wheel
 
 # create non-root user (in base so dev and final both get it)
 RUN addgroup --system appuser && adduser --system --ingroup appuser appuser
