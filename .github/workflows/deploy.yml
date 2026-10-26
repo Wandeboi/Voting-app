@@ -13,7 +13,7 @@ jobs:
         run: |
           docker compose up -d --build
           sleep 20
-          curl --fail http://localhost:8080 || (docker compose logs && exit 1)
+          curl --fail http://localhost:5000 || (docker compose logs && exit 1)
           docker compose down
 
   build-scan-push:
