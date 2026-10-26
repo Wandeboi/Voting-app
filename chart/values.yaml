@@ -1,0 +1,26 @@
+apps:
+  vote:
+    image: {repository: wandeboi/voting-vote, tag: latest}
+    port: 5000
+    replicas: 2
+    runAsUser: 100        
+    serviceType: LoadBalancer
+    servicePort: 80
+  result:
+    image: {repository: wandeboi/voting-result, tag: latest}
+    port: 5000
+    replicas: 1           # socket.io needs sticky sessions for more than 1
+    runAsUser: 100        
+    serviceType: LoadBalancer
+    servicePort: 80
+  worker:
+    image: {repository: wandeboi/voting-worker, tag: latest}
+    replicas: 1
+    runAsUser: 100        
+
+redis:
+  image: redis:alpine
+db:
+  image: postgres:15-alpine
+  user: postgres
+  password: postgres
