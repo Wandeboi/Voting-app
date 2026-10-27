@@ -14,7 +14,7 @@ Run in this directory to build and run the app:
 docker compose up
 ```
 
-The `vote` app will be running at [http://localhost:8080](http://localhost:8080), and the `results` will be at [http://localhost:8081](http://localhost:8081).
+The `vote` app will be running at [http://localhost:5000](http://localhost:5000), and the `results` will be at [http://localhost:5001](http://localhost:5001).
 
 Alternately, if you want to run it on a [Docker Swarm](https://docs.docker.com/engine/swarm/), first make sure you have a swarm. If you don't, run:
 
@@ -38,8 +38,6 @@ Run the following command to create the deployments and services. Note it will c
 kubectl create -f k8s-specifications/
 ```
 
-The `vote` web app is then available on port 31000 on each host of the cluster, the `result` web app is available on port 31001.
-
 To remove them, run:
 
 ```shell
@@ -55,6 +53,48 @@ kubectl delete -f k8s-specifications/
 * A [.NET](/worker/) worker which consumes votes and stores them in…
 * A [Postgres](https://hub.docker.com/_/postgres/) database backed by a Docker volume
 * A [Node.js](/result) web app which shows the results of the voting in real time
+
+A voting app (vote, result, worker, redis, db) containerised, scanned, and deployed to Amazon EKS from code.
+
+- **vote**: Python/Flask, port 5000
+- **result**: Node.js, port 5000
+- **worker**: .NET 8, moves votes from Redis to Postgres
+- **redis**, **db** (Postgres 15)
+
+## Run locally
+    docker compose up -d --build
+    vote: http://localhost:5000   result: http://localhost:5001
+
+## Infrastructure (Terraform)
+    cd terraform
+    terraform init && terraform apply
+    aws eks update-kubeconfig --name <cluster-name> --region eu-north-1
+    kubectl get nodes
+Teardown and rebuild: `terraform destroy`, then `terraform apply`.
+State files are gitignored.
+
+## CI/CD (GitHub Actions: .github/workflows/deploy.yml)
+1. **test**: Compose smoke test
+2. **build-scan-push**: builds each image, scans with Trivy (fails on HIGH/CRITICAL), pushes to Docker Hub tagged with the commit SHA
+3. **deploy**: `helm upgrade --install` to EKS with that SHA
+
+Repository secrets required: `DOCKERHUB_WANDE`, `DOCKERHUB_TOKEN`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.
+
+## Deploy with Helm
+    helm upgrade --install voting ./chart --wait --timeout 5m \
+      --set apps.vote.image.tag=<sha> \
+      --set apps.result.image.tag=<sha> \
+      --set apps.worker.image.tag=<sha>
+
+## Security
+- All app containers run as a non-root user (`appuser`)
+- Images scanned by Trivy on every push
+- Pods set `runAsNonRoot` and disable privilege escalation
+
+## Teardown
+    helm uninstall voting
+    cd terraform && terraform destroy
+Uninstall the chart first so the load balancers are deleted.
 
 ## Notes
 
